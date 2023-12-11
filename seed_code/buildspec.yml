@@ -1,0 +1,24 @@
+version: 0.2
+
+env:
+  shell: bash
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - pip install -r requirements.txt
+      - export PYTHONUNBUFFERED=TRUE
+      - export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+  pre_build:
+    commands:
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+  build:
+    commands:
+      - python train.py
+  post_build:
+    commands:
+      - FILE_NAME=$(find . -type f -iname "$MODEL_NAME*")
+      - docker build --build-arg FILE_NAME -t $REPOSITORY_URL:$COMMIT_ID .
+      - docker push $REPOSITORY_URL:$COMMIT_ID
